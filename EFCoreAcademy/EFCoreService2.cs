@@ -4,6 +4,12 @@ namespace EFCoreAcademy;
 
 public class EFCoreService2 : IHostedService
 {
+    private readonly serviceToInject serviceToInject;
+
+    public EFCoreService2(serviceToInject serviceToInject)
+    {
+        this.serviceToInject = serviceToInject;
+    }
     public Task StartAsync(CancellationToken cancellationToken)
     {
         Console.WriteLine("second hosted service started !");

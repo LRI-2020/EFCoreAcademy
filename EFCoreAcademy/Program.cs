@@ -16,9 +16,9 @@ var connectionString = config["ConnectionStrings:EFCoreAcademy"];
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
 hostBuilder.Logging.SetMinimumLevel(LogLevel.Warning);
-    
+hostBuilder.Services.AddScoped<serviceToInject>();
 hostBuilder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-hostBuilder.Services.AddHostedService<EFCoreService2>();
 hostBuilder.Services.AddHostedService<EfCoreTest>();
+hostBuilder.Services.AddHostedService<EFCoreService2>();
 var host = hostBuilder.Build();
-await host.RunAsync(); // call StartAsync() method of every IHostedService implementation (2 in this case)
+await host.RunAsync();
