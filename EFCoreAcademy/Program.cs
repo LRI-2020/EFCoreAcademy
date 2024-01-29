@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 // See https://aka.ms/new-console-template for more information
 
@@ -14,11 +15,10 @@ IConfiguration config = configBuilder.Build();
 var connectionString = config["ConnectionStrings:EFCoreAcademy"];
 
 HostApplicationBuilder hostBuilder = Host.CreateApplicationBuilder(args);
+hostBuilder.Logging.SetMinimumLevel(LogLevel.Warning);
+    
 hostBuilder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
-hostBuilder.Build();
-
-if (connectionString != null)
-{
-    var efCoreTest = new EfCoreTest(connectionString);
-    await efCoreTest.Start();
-}
+hostBuilder.Services.AddHostedService<EFCoreService2>();
+hostBuilder.Services.AddHostedService<EfCoreTest>();
+var host = hostBuilder.Build();
+await host.RunAsync(); // call StartAsync() method of every IHostedService implementation (2 in this case)

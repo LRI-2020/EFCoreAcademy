@@ -1,20 +1,28 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace EFCoreAcademy;
 
-public class EfCoreTest
+public class EfCoreTest : IHostedService
 {
-    private readonly string connectionString;
+    private readonly ApplicationDbContext dbContext;
 
-    public EfCoreTest(string connectionString)
+    public EfCoreTest(ApplicationDbContext dbContext)
     {
-        this.connectionString = connectionString;
+        this.dbContext = dbContext;
     }
 
-    public async Task Start()
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-           
+        await Start();
+        Environment.Exit(0);
+      
+    }
+
+    private async Task Start()
+    {
+        Console.WriteLine("app started");
         var newId = await Insert();
         Console.WriteLine("new address added, Id : " + newId);
 
@@ -43,23 +51,17 @@ public class EfCoreTest
         await DeleteAddress(newId);
         Console.WriteLine("addresses after delete : ");
         DisplayAllAddresses();
-
-        
     }
- 
 
-void DisplayAllStudents()
-{
-    var students = GetStudents();
-    Console.WriteLine("students : ");
-    students.ForEach(s => { Console.WriteLine(JsonSerializer.Serialize(s)); });
-    
-}
-async Task<int> Insert()
-{
-    var dbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
 
-    await using (dbContext)
+    void DisplayAllStudents()
+    {
+        var students = GetStudents();
+        Console.WriteLine("students : ");
+        students.ForEach(s => { Console.WriteLine(JsonSerializer.Serialize(s)); });
+    }
+
+    async Task<int> Insert()
     {
         var city = GetRdmString(5);
         var houseN = Int32.Parse(GetRdmNumericString(2));
@@ -76,118 +78,93 @@ async Task<int> Insert()
         await dbContext.SaveChangesAsync();
         return address.Id;
     }
-}
 
-string GetRdmString(int numberCharacters)
-{
-    var chars = new List<char>();
-    for (int i = 0; i < numberCharacters; i++)
+    string GetRdmString(int numberCharacters)
     {
+        var chars = new List<char>();
+        for (int i = 0; i < numberCharacters; i++)
+        {
+            var rdm = new Random();
+            chars.Add((char)rdm.Next(65, 90));
+        }
+
+        return string.Concat(chars);
+    }
+
+    string GetRdmNumericString(int count)
+    {
+        var res = new List<string>();
         var rdm = new Random();
-        chars.Add((char)rdm.Next(65, 90));
+
+        for (int i = 0; i < count; i++)
+        {
+            res.Add(rdm.Next(1, 9).ToString());
+        }
+
+        return string.Concat(res);
     }
 
-    return string.Concat(chars);
-}
-
-string GetRdmNumericString(int count)
-{
-    var res = new List<string>();
-    var rdm = new Random();
-
-    for (int i = 0; i < count; i++)
+    void DisplayAllAddresses()
     {
-        res.Add(rdm.Next(1, 9).ToString());
+        var addresses = GetAddresses();
+        addresses.ForEach(a => { Console.WriteLine(JsonSerializer.Serialize(a)); });
     }
 
-    return string.Concat(res);
-}
-
-void DisplayAllAddresses()
-{
-    var addresses = GetAddresses();
-    addresses.ForEach(a => { Console.WriteLine(JsonSerializer.Serialize(a)); });
-}
-
-async Task<Address?> GetAddress(int id)
-{
-    var applicationDbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-
-    await using (applicationDbContext)
+    async Task<Address?> GetAddress(int id)
     {
-        // var address = applicationDbContext.Addresses.ToList().Find(a => a.Id == Id);
-        var address = await applicationDbContext.Addresses.FindAsync(id);
+        var address = await dbContext.Addresses.FindAsync(id);
         return address;
     }
-}
 
-List<Address> GetAddresses()
-{
-    var applicationDbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-
-    using (applicationDbContext)
+    List<Address> GetAddresses()
     {
-        var resut = applicationDbContext.Addresses.ToList();
+        var resut = dbContext.Addresses.ToList();
         return resut;
     }
-}
 
-List<Student> GetStudents()
-{
-    var applicationDbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-
-    using (applicationDbContext)
+    List<Student> GetStudents()
     {
-        var studentsRes = applicationDbContext.Students.ToList();
+        var studentsRes = dbContext.Students.ToList();
         return studentsRes;
     }
-}
 
-async Task UpdateAddress(int id)
-{
-    var applicationDbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-
-    await using (applicationDbContext)
+    async Task UpdateAddress(int id)
     {
-        var address = applicationDbContext.Addresses.Find(id);
+        var address = await dbContext.Addresses.FindAsync(id);
         if (address != null)
         {
             address.City = GetRdmString(5);
             address.Zip = GetRdmNumericString(5);
-            await applicationDbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
     }
-}
+
 // Careful with the dbContext instances which are used
-async Task UpdateAddressNotWorking(int id)
-{
-
-    var addr = await GetAddress(id);
-    var applicationDbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-
-    await using (applicationDbContext)
+    async Task UpdateAddressNotWorking(int id)
     {
+        var addr = await GetAddress(id);
+
         if (addr != null)
         {
             addr.City = GetRdmString(5);
             addr.Zip = GetRdmNumericString(5);
-            await applicationDbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
         }
     }
-}
 
-async Task DeleteAddress(int id)
-{
-    var dbContext = new ApplicationDbContext(new DbContextOptionsBuilder<ApplicationDbContext>().UseSqlServer(connectionString).Options);
-    await using (dbContext)
+    async Task DeleteAddress(int id)
     {
         var address = await dbContext.Addresses.FindAsync(id);
         if (address != null)
         {
             dbContext.Addresses.Remove(address);
             await dbContext.SaveChangesAsync();
-
         }
     }
-}
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        Console.WriteLine("shutting down ...");
+        return Task.CompletedTask;
+    }
 }
